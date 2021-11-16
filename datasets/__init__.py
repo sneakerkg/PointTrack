@@ -12,5 +12,7 @@ def get_dataset(name, dataset_opts):
         return MOTSTrackCarsTrain(**dataset_opts)
     elif name == "mots_cars":
         return MOTSCars(**dataset_opts)
+    elif name == "mots_fish":
+        return MOTSFish(**dataset_opts)
     else:
         raise RuntimeError("Dataset {} not available".format(name))

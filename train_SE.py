@@ -21,6 +21,8 @@ from utils.utils import AverageMeter, Cluster, Logger, Visualizer
 from file_utils import remove_key_word
 from random import random
 
+from torch.utils.tensorboard import SummaryWriter
+
 torch.backends.cudnn.benchmark = True
 config_name = sys.argv[1]
 
@@ -122,7 +124,7 @@ else:
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_, )
 
 
-def train(epoch):
+def train(epoch, writer):
     # define meters
     loss_meter = AverageMeter()
     loss_seed_meter = AverageMeter()
@@ -156,6 +158,9 @@ def train(epoch):
 
         loss_meter.update(loss.item())
         loss_seed_meter.update(seed_loss.item())
+
+        if i % 100 == 0:
+            writer.add_scalar("batch-train-loss", loss.item(), epoch*len(train_dataset_it)+i)
 
     return loss_meter.avg, loss_seed_meter.avg
 
@@ -200,6 +205,9 @@ def save_checkpoint(state, is_best, val_iou, val_seed_loss, is_lowest=False, nam
             args['save_dir'], 'best_seed_model.pth' + str(val_seed_loss)))
 
 
+writer1 = SummaryWriter(os.path.join(args['save_dir'], 'train'))
+writer2 = SummaryWriter(os.path.join(args['save_dir'], 'val'))
+
 for epoch in range(start_epoch, args['n_epochs']):
 
     print('Starting epoch {}'.format(epoch))
@@ -209,12 +217,16 @@ for epoch in range(start_epoch, args['n_epochs']):
         val_loss, val_iou, val_seed_loss = val(epoch)
         print('===> val loss: {:.4f}, val iou: {:.4f}, val seed: {:.4f}'.format(val_loss, val_iou, val_seed_loss))
 
-    train_loss, seed_loss = train(epoch)
+    train_loss, seed_loss = train(epoch, writer1)
     val_loss, val_iou, val_seed_loss = val(epoch)
 
     print('===> train loss: {:.4f}'.format(train_loss))
     print('===> seed loss: {:.4f}'.format(seed_loss))
     print('===> val loss: {:.4f}, val iou: {:.4f}, val seed: {:.4f}'.format(val_loss, val_iou, val_seed_loss))
+
+    writer1.add_scalar("epoch-train-loss", train_loss, epoch)
+    writer2.add_scalar("epoch-val-loss", val_loss, epoch)
+    writer2.add_scalar("epoch-val-iou", val_iou, epoch)
 
     logger.add('train', train_loss)
     logger.add('val', val_loss)

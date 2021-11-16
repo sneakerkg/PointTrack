@@ -626,3 +626,91 @@ class MOTSCars(Dataset):
             class_map[mask_others] = -2
 
         return Image.fromarray(instance_map), Image.fromarray(class_map)
+
+
+class MOTSFish(Dataset):
+
+    def __init__(self, root_dir='./', type="train", size=None, transform=None):
+
+        print('Fishbowl Dataset created')
+        self.class_id = 26
+        self.type = type
+        # NOTE: only train for 1000 for now
+        self.num_videos = 1000 if type == 'train' else 100
+        self.num_frames_per_video = 128
+        self.img_folder = os.path.join(root_dir, self.type+'_data', self.type+'_frames')
+        self.instance_folder = os.path.join(root_dir, self.type+'_data', self.type+'_instances')
+
+        self.image_list = []
+        self.instance_list = []
+        for v_id in range(self.num_videos):
+            for frame_id in range(self.num_frames_per_video):
+                img_path = os.path.join(self.img_folder, "%05d"%v_id, "%05d.png"%frame_id)
+                instance_path = os.path.join(self.instance_folder, "%05d"%v_id, "%05d.png"%frame_id)
+                self.image_list.append(img_path)
+                self.instance_list.append(instance_path)
+
+        self.real_size = len(self.image_list)
+        self.size = size
+        self.transform = transform
+
+    def __len__(self):
+
+        return self.real_size if self.size is None else self.size
+
+    def get_data_from_fishbowl(self, index):
+        sample = {}
+        #print (self.image_list[index], self.instance_list[index])
+        #exit (0)
+        image = Image.open(self.image_list[index])
+        # load instances
+        instance = Image.open(self.instance_list[index])
+        instance, label = self.decode_instance(instance, self.instance_list[index])  # get semantic map and instance map
+        sample['image'] = image
+        sample['im_name'] = self.image_list[index]
+        sample['instance'] = instance
+        sample['label'] = label
+        del image
+        del instance
+
+        return sample
+
+    def __getitem__(self, index):
+        # select two images from kins
+        while 1:
+            try:
+                sample = self.get_data_from_fishbowl(index)
+                # transform
+                if (self.transform is not None):
+                    sample = self.transform(sample)
+                    return sample
+                else:
+                    #print ('get val')
+                    return sample
+            except:
+                pass
+
+    def decode_instance(self, pic, path):
+        class_id = 26
+        pic = np.array(pic, copy=False)
+
+        instance_map = np.zeros(
+            (pic.shape[0], pic.shape[1]), dtype=np.uint8)
+
+        # contains the class of each instance, but will set the class of "unlabeled instances/groups" to bg
+        class_map = np.zeros(
+            (pic.shape[0], pic.shape[1]), dtype=np.uint8)
+
+        mask = np.logical_and(pic >= class_id * 1000, pic < (class_id + 1) * 1000)
+
+        if mask.sum() > 0:
+            ids, _, _ = relabel_sequential(pic[mask])
+            instance_map[mask] = ids
+            class_map[mask] = 1
+
+        # assign vehicles but not car to -2, dontcare
+        mask = np.logical_and(pic > 0, pic < 1000)
+        mask_others = (pic == 10000) & mask
+        if mask_others.sum() > 0:
+            class_map[mask_others] = -2
+        return Image.fromarray(instance_map), Image.fromarray(class_map)

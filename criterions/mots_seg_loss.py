@@ -23,10 +23,12 @@ class MOTSSeg2Loss(nn.Module):
         self.foreground_weight = foreground_weight
 
         # coordinate map
-        xm = torch.linspace(0, 2, 2048).view(
-            1, 1, -1).expand(1, 1024, 2048)
-        ym = torch.linspace(0, 1, 1024).view(
-            1, -1, 1).expand(1, 1024, 2048)
+        t_height = 320
+        t_width = 480
+        xm = torch.linspace(0, 2, t_width).view(
+            1, 1, -1).expand(1, t_height, t_width)
+        ym = torch.linspace(0, 1, t_height).view(
+            1, -1, 1).expand(1, t_height, t_width)
         xym = torch.cat((xm, ym), 0)
 
         self.register_buffer("xym", xym)
