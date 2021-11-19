@@ -19,10 +19,10 @@ args = dict(
     display_it=5,
 
     save=True,
-    save_dir='./fish_SE/exp0',
+    save_dir='./fish_SE/full_set',
     # resume_path='./pointTrack_weights/best_seed_model.pthCar',
     # resume_path='./mots_finetune_car2/checkpoint.pth',
-    # resume_path = './fish_SE/best_seed_model.pth6.441542063839734e-05',
+    # resume_path = './fish_SE/exp0/best_iou_model.pth0.8987708287747176',
 
     train_dataset = {
         'name': 'mots_fish',
@@ -87,8 +87,8 @@ args = dict(
     },
 
     lr=5e-4,
-    milestones=[50],
-    n_epochs=50,
+    milestones=[5],
+    n_epochs=5,
     start_epoch=1,
     max_disparity=192.0,
 

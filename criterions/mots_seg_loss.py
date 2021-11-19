@@ -33,7 +33,7 @@ class MOTSSeg2Loss(nn.Module):
 
         self.register_buffer("xym", xym)
 
-    def forward(self, prediction, instances, labels, w_inst=1, w_var=10, w_seed=1, iou=False, iou_meter=None, show_seed=False):
+    def forward(self, prediction, instances, labels, w_inst=1, w_var=10, w_seed=1, iou=False, iou_meter=None, show_seed=False, return_pred=False):
 
         batch_size, height, width = prediction.size(
             0), prediction.size(2), prediction.size(3)
@@ -42,7 +42,10 @@ class MOTSSeg2Loss(nn.Module):
 
         loss = 0
 
+        instance_maps = []
+
         for b in range(0, batch_size):
+            instance_maps.append([])
 
             spatial_emb = torch.tanh(prediction[b, 0:2]) + xym_s  # 2 x h x w
             sigma = prediction[b, 2:2+self.n_sigma]  # n_sigma x h x w
@@ -107,6 +110,8 @@ class MOTSSeg2Loss(nn.Module):
                 if iou:
                     iou_meter.update(calculate_iou(dist > 0.5, in_mask))
 
+                instance_maps[-1].append((dist > 0.5).cpu().numpy())
+
                 obj_count += 1
 
             if obj_count > 0:
@@ -119,10 +124,16 @@ class MOTSSeg2Loss(nn.Module):
 
         loss = loss / (b+1)
 
-        if show_seed:
-            return loss + prediction.sum()*0, seed_loss
+        if return_pred:
+            if show_seed:
+                return loss + prediction.sum()*0, seed_loss, instance_maps
+            else:
+                return loss + prediction.sum() * 0, instance_maps
         else:
-            return loss + prediction.sum() * 0
+            if show_seed:
+                return loss + prediction.sum()*0, seed_loss
+            else:
+                return loss + prediction.sum() * 0
 
 
 def calculate_iou(pred, label):

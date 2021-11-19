@@ -636,7 +636,7 @@ class MOTSFish(Dataset):
         self.class_id = 26
         self.type = type
         # NOTE: only train for 1000 for now
-        self.num_videos = 1000 if type == 'train' else 100
+        self.num_videos = 10000 if type == 'train' else 100
         self.num_frames_per_video = 128
         self.img_folder = os.path.join(root_dir, self.type+'_data', self.type+'_frames')
         self.instance_folder = os.path.join(root_dir, self.type+'_data', self.type+'_instances')

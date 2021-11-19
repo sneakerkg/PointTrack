@@ -106,6 +106,7 @@ if 'resume_path' in args.keys() and args['resume_path'] is not None and os.path.
     except:
         pass
 
+
 # set optimizer
 if 'seed_only' in args.keys() and args['seed_only']:
     print('finetune SEED only')
