@@ -44,15 +44,15 @@ class Visualizer:
     def display(self, image, key):
 
         n_images = len(image) if isinstance(image, (list, tuple)) else 1
-    
+
         if self.wins[key] is None:
             self.wins[key] = plt.subplots(ncols=n_images)
-    
+
         fig, ax = self.wins[key]
         n_axes = len(ax) if isinstance(ax, collections.Iterable) else 1
-    
+
         assert n_images == n_axes
-    
+
         if n_images == 1:
             ax.cla()
             ax.set_axis_off()
@@ -62,7 +62,7 @@ class Visualizer:
                 ax[i].cla()
                 ax[i].set_axis_off()
                 ax[i].imshow(self.prepare_img(image[i]))
-    
+
         plt.draw()
         self.mypause(0.001)
 
@@ -95,9 +95,11 @@ class Visualizer:
 class Cluster:
 
     def __init__(self, ):
+        t_height = 320
+        t_width = 480
 
-        xm = torch.linspace(0, 2, 2048).view(1, 1, -1).expand(1, 1024, 2048)
-        ym = torch.linspace(0, 1, 1024).view(1, -1, 1).expand(1, 1024, 2048)
+        xm = torch.linspace(0, 2, t_width).view(1, 1, -1).expand(1, t_height, t_width)
+        ym = torch.linspace(0, 1, t_height).view(1, -1, 1).expand(1, t_height, t_width)
         xym = torch.cat((xm, ym), 0)
 
         self.xym = xym.cuda()
@@ -105,43 +107,43 @@ class Cluster:
     def cluster_with_gt(self, prediction, instance, n_sigma=1,):
 
         height, width = prediction.size(1), prediction.size(2)
-    
+
         xym_s = self.xym[:, 0:height, 0:width]  # 2 x h x w
-    
+
         spatial_emb = torch.tanh(prediction[0:2]) + xym_s  # 2 x h x w
         sigma = prediction[2:2+n_sigma]  # n_sigma x h x w
-    
+
         instance_map = torch.zeros(height, width).byte().cuda()
-    
+
         unique_instances = instance.unique()
         unique_instances = unique_instances[unique_instances != 0]
-    
+
         for id in unique_instances:
-    
+
             mask = instance.eq(id).view(1, height, width)
-    
+
             center = spatial_emb[mask.expand_as(spatial_emb)].view(
                 2, -1).mean(1).view(2, 1, 1)  # 2 x 1 x 1
-    
+
             s = sigma[mask.expand_as(sigma)].view(n_sigma, -1).mean(1).view(n_sigma, 1, 1)
             s = torch.exp(s*10)  # n_sigma x 1 x 1
-    
+
             dist = torch.exp(-1 * torch.sum(torch.pow(spatial_emb - center, 2)*s, 0))
-    
+
             proposal = (dist > 0.5)
             instance_map[proposal] = id
-    
+
         return instance_map
 
     def cluster(self, prediction, n_sigma=1, threshold=0.5):
 
         height, width = prediction.size(1), prediction.size(2)
         xym_s = self.xym[:, 0:height, 0:width]
-        
+
         spatial_emb = torch.tanh(prediction[0:2]) + xym_s  # 2 x h x w
         sigma = prediction[2:2+n_sigma]  # n_sigma x h x w
         seed_map = torch.sigmoid(prediction[2+n_sigma:2+n_sigma + 1])  # 1 x h x w
-       
+
         instance_map = torch.zeros(height, width).byte()
         instances = []
 

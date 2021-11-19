@@ -670,6 +670,7 @@ class MOTSFish(Dataset):
         sample['im_name'] = self.image_list[index]
         sample['instance'] = instance
         sample['label'] = label
+        sample['im_shape'] = image.size
         del image
         del instance
 

@@ -61,12 +61,14 @@ model = torch.nn.DataParallel(model).to(device)
 # cluster module
 cluster = Cluster()
 
-xm = torch.linspace(0, 2, 2048).view(
-    1, 1, -1).expand(1, 1024, 2048)
-ym = torch.linspace(0, 1, 1024).view(
-    1, -1, 1).expand(1, 1024, 2048)
-xym = torch.cat((xm, ym), 0).cuda()
-
+# coordinate map
+t_height = 320
+t_width = 480
+xm = torch.linspace(0, 2, t_width).view(
+    1, 1, -1).expand(1, t_height, t_width)
+ym = torch.linspace(0, 1, t_height).view(
+    1, -1, 1).expand(1, t_height, t_width)
+xym = torch.cat((xm, ym), 0)
 
 def prepare_img(image):
     if isinstance(image, Image.Image):
@@ -97,13 +99,12 @@ with torch.no_grad():
     os.mkdir(args['save_dir'])
     # try:
     for i, sample in enumerate(tqdm(dataset_it)):
-        print (sample.keys())
-        base = sample['mot_im_name'][0].replace('/', '_').replace('.png', '.pkl')
+        base = sample['im_name'][0].replace('/', '_').replace('.png', '.pkl')
         middle = base[:-4].split('_')[-1]
         base = base.replace(middle, str(int(float(middle))))
 
-        im = sample['mot_image']
-        instances = sample['mot_instance'].squeeze(1)[0]
+        im = sample['image']
+        instances = sample['instance'].squeeze(1)[0]
         w, h = sample['im_shape'][0].item(), sample['im_shape'][1].item()
 
         output = model(im)
@@ -114,12 +115,14 @@ with torch.no_grad():
                                                       min_pixel=args['min_pixel'],
                                                       with_uv=args['with_uv'], n_sigma=args["n_sigma"] if "n_sigma" in args.keys() else 1)
 
+
         instance_map_np = instance_map.numpy()
         # cv2.imwrite("/home/xubb/1.jpg", instance_map.numpy() * 50)
+
         save_pickle2(os.path.join(args['save_dir'], base), instance_map_np)
 
     # eval on args['save_dir']
-    p = subprocess.run([pythonPath, "-u", "test_tracking.py", 'car_test_tracking_val'], stdout=subprocess.PIPE, cwd=rootDir)
+    p = subprocess.run([pythonPath, "-u", "test_tracking.py", 'fish_test_tracking_val'], stdout=subprocess.PIPE, cwd=rootDir)
 
     pout = p.stdout.decode("utf-8")
     # class_str = "Evaluate class: Cars"
